@@ -10,18 +10,28 @@ load_dotenv()
 
 TOKEN = os.getenv("DISCORD_TOKEN")
 if not TOKEN:
-    raise ValueError("Brak tokenu bota! Ustaw DISCORD_TOKEN.")
+    raise ValueError("Brak tokenu DISCORD_TOKEN!")
 
+# ==============================
+# INTENTS
+# ==============================
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 
+# ==============================
+# BOT
+# ==============================
 bot = commands.Bot(
     command_prefix="!",
     intents=intents,
     help_command=None,
+    application_id=1502958498890256504  # <- TWOJE ID
 )
 
+# ==============================
+# COGS
+# ==============================
 COGS = [
     "cogs.economy",
     "cogs.games",
@@ -33,12 +43,46 @@ COGS = [
     "cogs.help",
 ]
 
+# ==============================
+# LOAD COGS
+# ==============================
+async def load_cogs():
+    for cog in COGS:
+        try:
+            await bot.load_extension(cog)
+            print(f"✅ Załadowano: {cog}")
+        except Exception as e:
+            print(f"❌ Błąd ładowania {cog}: {e}")
 
 # ==============================
-# ERROR HANDLING SLASH
+# ON READY
+# ==============================
+@bot.event
+async def on_ready():
+    await db.init_db()
+
+    print(f"✅ Bot uruchomiony jako: {bot.user}")
+    print(f"📡 Serwery: {len(bot.guilds)}")
+
+    try:
+        synced = await bot.tree.sync()
+        print(f"🔄 Zsynchronizowano {len(synced)} komend slash")
+    except Exception as e:
+        print(f"❌ Błąd sync: {e}")
+
+    await bot.change_presence(
+        activity=discord.Activity(
+            type=discord.ActivityType.playing,
+            name="💎 Crypto Casino | /pomoc",
+        )
+    )
+
+# ==============================
+# ERROR HANDLER SLASH
 # ==============================
 @bot.tree.error
 async def on_app_command_error(interaction: discord.Interaction, error):
+
     if isinstance(error, discord.app_commands.CommandOnCooldown):
         await interaction.response.send_message(
             embed=utils.make_embed(
@@ -65,7 +109,7 @@ async def on_app_command_error(interaction: discord.Interaction, error):
             await interaction.response.send_message(
                 embed=utils.make_embed(
                     "❌ Błąd",
-                    "Wystąpił błąd.",
+                    "Wystąpił nieoczekiwany błąd.",
                     utils.LOSE_COLOR,
                 ),
                 ephemeral=True,
@@ -73,53 +117,16 @@ async def on_app_command_error(interaction: discord.Interaction, error):
         except Exception:
             pass
 
-
 # ==============================
-# LOAD COGS + SYNC (POPRAWIONE)
-# ==============================
-async def load_cogs():
-    for cog in COGS:
-        try:
-            await bot.load_extension(cog)
-            print(f"✅ Załadowano: {cog}")
-        except Exception as e:
-            print(f"❌ Błąd ładowania {cog}: {e}")
-
-
-# ==============================
-# START
+# MAIN START
 # ==============================
 async def main():
     async with bot:
-        await db.init_db()
-
         await load_cogs()
-
-        # 🔥 WAŻNE: sync PO załadowaniu cogów
-        try:
-            synced = await bot.tree.sync()
-            print(f"🔄 Zsynchronizowano {len(synced)} komend slash")
-        except Exception as e:
-            print(f"❌ Błąd sync: {e}")
-
         await bot.start(TOKEN)
 
-
 # ==============================
-# READY EVENT
+# RUN
 # ==============================
-@bot.event
-async def on_ready():
-    print(f"✅ Bot online: {bot.user} (ID: {bot.user.id})")
-    print(f"📡 Serwery: {len(bot.guilds)}")
-
-    await bot.change_presence(
-        activity=discord.Activity(
-            type=discord.ActivityType.playing,
-            name="💎 Crypto Casino | /botinfo",
-        )
-    )
-
-
 if __name__ == "__main__":
     asyncio.run(main())
