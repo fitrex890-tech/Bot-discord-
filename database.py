@@ -22,9 +22,6 @@ async def init_db():
 
             wins INTEGER DEFAULT 0,
 
-            total_earned INTEGER DEFAULT 0,
-            total_lost INTEGER DEFAULT 0,
-
             last_daily TEXT DEFAULT NULL,
             last_work TEXT DEFAULT NULL,
 
@@ -56,7 +53,7 @@ async def ensure_user(db, user_id: int):
 
 
 # =========================
-# GET PROFILE
+# PROFILE
 # =========================
 async def get_profile(user_id: int):
     async with aiosqlite.connect(DB_PATH) as db:
@@ -70,18 +67,7 @@ async def get_profile(user_id: int):
         ) as cur:
             row = await cur.fetchone()
 
-            if not row:
-                return {
-                    "crypto": 0,
-                    "pln": 0,
-                    "bank_crypto": 0,
-                    "bank_pln": 0,
-                    "wins": 0,
-                    "last_daily": None,
-                    "last_work": None
-                }
-
-            return dict(row)
+            return dict(row) if row else {}
 
 
 # =========================
@@ -91,8 +77,38 @@ async def update_crypto(user_id: int, amount: int):
     async with aiosqlite.connect(DB_PATH) as db:
         await ensure_user(db, user_id)
 
+        await db.execute(
+            "UPDATE users SET crypto = crypto + ? WHERE user_id = ?",
+            (amount, user_id)
+        )
+
+        await db.commit()
+
+
+# =========================
+# BANK CRYPTO
+# =========================
+async def update_bank_crypto(user_id: int, amount: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await ensure_user(db, user_id)
+
+        await db.execute(
+            "UPDATE users SET bank_crypto = bank_crypto + ? WHERE user_id = ?",
+            (amount, user_id)
+        )
+
+        await db.commit()
+
+
+# =========================
+# LOG TRANSACTION (FIXED)
+# =========================
+async def log_transaction(user_id: int, amount: int, type_: str):
+    async with aiosqlite.connect(DB_PATH) as db:
+
         await db.execute("""
-        UPDATE users
-        SET crypto = crypto + ?
-        WHERE user_id = ?
-        """, (amount,
+        INSERT INTO transactions (user_id, amount, type)
+        VALUES (?, ?, ?)
+        """, (user_id, amount, type_))
+
+        await db.commit()
