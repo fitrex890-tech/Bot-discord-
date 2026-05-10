@@ -15,6 +15,7 @@ async def init_db():
 
             crypto INTEGER DEFAULT 0,
             pln INTEGER DEFAULT 0,
+
             bank_crypto INTEGER DEFAULT 0,
             bank_pln INTEGER DEFAULT 0,
 
@@ -42,7 +43,7 @@ async def init_db():
 
 
 # =========================
-# ENSURE USER
+# ENSURE USER (SAFE)
 # =========================
 async def ensure_user(db, user_id: int):
     await db.execute(
@@ -52,11 +53,12 @@ async def ensure_user(db, user_id: int):
 
 
 # =========================
-# PROFILE
+# GET PROFILE (SAFE)
 # =========================
 async def get_profile(user_id: int):
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
+
         await ensure_user(db, user_id)
 
         async with db.execute(
@@ -64,56 +66,70 @@ async def get_profile(user_id: int):
             (user_id,)
         ) as cur:
             row = await cur.fetchone()
+
+            if not row:
+                return {
+                    "crypto": 0,
+                    "pln": 0,
+                    "bank_crypto": 0,
+                    "bank_pln": 0,
+                    "wins": 0
+                }
+
             return dict(row)
 
 
 # =========================
-# CRYPTO
+# UPDATE SAFE BALANCE
 # =========================
 async def update_crypto(user_id: int, amount: int):
     async with aiosqlite.connect(DB_PATH) as db:
         await ensure_user(db, user_id)
+
         await db.execute(
-            "UPDATE users SET crypto = crypto + ? WHERE user_id = ?",
+            """
+            UPDATE users 
+            SET crypto = MAX(0, crypto + ?) 
+            WHERE user_id = ?
+            """,
             (amount, user_id)
         )
         await db.commit()
 
 
-# =========================
-# PLN
-# =========================
 async def update_pln(user_id: int, amount: int):
     async with aiosqlite.connect(DB_PATH) as db:
         await ensure_user(db, user_id)
+
         await db.execute(
-            "UPDATE users SET pln = pln + ? WHERE user_id = ?",
+            """
+            UPDATE users 
+            SET pln = MAX(0, pln + ?) 
+            WHERE user_id = ?
+            """,
             (amount, user_id)
         )
         await db.commit()
 
 
 # =========================
-# BANK CRYPTO
+# BANK
 # =========================
 async def update_bank_crypto(user_id: int, amount: int):
     async with aiosqlite.connect(DB_PATH) as db:
         await ensure_user(db, user_id)
         await db.execute(
-            "UPDATE users SET bank_crypto = bank_crypto + ? WHERE user_id = ?",
+            "UPDATE users SET bank_crypto = MAX(0, bank_crypto + ?) WHERE user_id = ?",
             (amount, user_id)
         )
         await db.commit()
 
 
-# =========================
-# BANK PLN
-# =========================
 async def update_bank_pln(user_id: int, amount: int):
     async with aiosqlite.connect(DB_PATH) as db:
         await ensure_user(db, user_id)
         await db.execute(
-            "UPDATE users SET bank_pln = bank_pln + ? WHERE user_id = ?",
+            "UPDATE users SET bank_pln = MAX(0, bank_pln + ?) WHERE user_id = ?",
             (amount, user_id)
         )
         await db.commit()
@@ -125,6 +141,7 @@ async def update_bank_pln(user_id: int, amount: int):
 async def add_win(user_id: int):
     async with aiosqlite.connect(DB_PATH) as db:
         await ensure_user(db, user_id)
+
         await db.execute(
             "UPDATE users SET wins = wins + 1 WHERE user_id = ?",
             (user_id,)
@@ -133,7 +150,7 @@ async def add_win(user_id: int):
 
 
 # =========================
-# TRANSFER CRYPTO
+# SAFE TRANSFER CRYPTO
 # =========================
 async def transfer_crypto(from_id: int, to_id: int, amount: int):
     async with aiosqlite.connect(DB_PATH) as db:
@@ -141,9 +158,10 @@ async def transfer_crypto(from_id: int, to_id: int, amount: int):
         await ensure_user(db, to_id)
 
         await db.execute(
-            "UPDATE users SET crypto = crypto - ? WHERE user_id = ?",
+            "UPDATE users SET crypto = MAX(0, crypto - ?) WHERE user_id = ?",
             (amount, from_id)
         )
+
         await db.execute(
             "UPDATE users SET crypto = crypto + ? WHERE user_id = ?",
             (amount, to_id)
@@ -153,7 +171,7 @@ async def transfer_crypto(from_id: int, to_id: int, amount: int):
 
 
 # =========================
-# TRANSFER PLN
+# SAFE TRANSFER PLN
 # =========================
 async def transfer_pln(from_id: int, to_id: int, amount: int):
     async with aiosqlite.connect(DB_PATH) as db:
@@ -161,9 +179,10 @@ async def transfer_pln(from_id: int, to_id: int, amount: int):
         await ensure_user(db, to_id)
 
         await db.execute(
-            "UPDATE users SET pln = pln - ? WHERE user_id = ?",
+            "UPDATE users SET pln = MAX(0, pln - ?) WHERE user_id = ?",
             (amount, from_id)
         )
+
         await db.execute(
             "UPDATE users SET pln = pln + ? WHERE user_id = ?",
             (amount, to_id)
@@ -173,18 +192,18 @@ async def transfer_pln(from_id: int, to_id: int, amount: int):
 
 
 # =========================
-# BANK INTEREST
+# BANK INTEREST (SAFE)
 # =========================
 async def bank_interest(user_id: int):
     async with aiosqlite.connect(DB_PATH) as db:
         await ensure_user(db, user_id)
 
         await db.execute("""
-            UPDATE users
-            SET 
-                crypto = crypto + CAST(bank_crypto * 0.02 AS INT),
-                pln = pln + CAST(bank_pln * 0.02 AS INT)
-            WHERE user_id = ?
+        UPDATE users
+        SET 
+            crypto = crypto + CAST(bank_crypto * 0.02 AS INTEGER),
+            pln = pln + CAST(bank_pln * 0.02 AS INTEGER)
+        WHERE user_id = ?
         """, (user_id,))
 
         await db.commit()
@@ -198,11 +217,11 @@ async def get_top_users(limit: int = 10):
         db.row_factory = aiosqlite.Row
 
         async with db.execute("""
-            SELECT *,
-            (crypto + bank_crypto) as total
-            FROM users
-            ORDER BY total DESC
-            LIMIT ?
+        SELECT *,
+        (crypto + bank_crypto + pln + bank_pln) as total
+        FROM users
+        ORDER BY total DESC
+        LIMIT ?
         """, (limit,)) as cur:
 
             rows = await cur.fetchall()
@@ -210,7 +229,7 @@ async def get_top_users(limit: int = 10):
 
 
 # =========================
-# TRANSACTIONS
+# LOG TRANSACTIONS
 # =========================
 async def log_transaction(user_id: int, amount: int, type_: str):
     async with aiosqlite.connect(DB_PATH) as db:
