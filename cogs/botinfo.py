@@ -14,40 +14,35 @@ class BotInfo(commands.Cog):
     )
     async def botinfo(self, interaction: discord.Interaction):
 
-        total_commands = len(list(self.bot.tree.walk_commands()))
-        guild_count = len(self.bot.guilds)
-        total_users = sum(g.member_count or 0 for g in self.bot.guilds)
-
         embed = utils.make_embed(
-            title="🤖 Crypto Casino Bot",
-            description="Bot ekonomiczno-kasynowy z walutą Crypto 💎",
+            title="🎰 Hazard Bot",
+            description="Bot ekonomiczno-kasynowy",
             color=utils.JACKPOT_COLOR,
         )
 
         embed.add_field(
-            name="💰 Ekonomia",
-            value="/balans • /daily • /pracuj • /żebrz • /przelej",
+            name="🤖 Nazwa",
+            value="Hazard Bot",
+            inline=True,
+        )
+
+        embed.add_field(
+            name="👤 Stworzony przez",
+            value="xrealfitrex",
+            inline=True,
+        )
+
+        embed.add_field(
+            name="🏠 Serwer",
+            value="Zjednoczeni ideą",
             inline=False,
         )
 
         embed.add_field(
-            name="🎰 Gry",
-            value="/spin • /blackjack • /slots • /roulette",
-            inline=False,
-        )
-
-        embed.add_field(
-            name="🛡️ Admin",
-            value="/dodajpieniadze • /usunpieniadze • /ustawpieniadze",
-            inline=False,
-        )
-
-        embed.add_field(
-            name="📊 Info",
+            name="📊 Statystyki",
             value=(
-                f"🌐 Serwery: **{guild_count}**\n"
-                f"👥 Użytkownicy: **{total_users:,}**\n"
-                f"⚙️ Komendy: **{total_commands}**"
+                f"🌐 Serwery: **{len(self.bot.guilds)}**\n"
+                f"👥 Użytkownicy: **{sum(g.member_count or 0 for g in self.bot.guilds):,}**"
             ),
             inline=False,
         )
