@@ -2,7 +2,16 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 import database as db
-import utils
+
+
+# ==============================
+# ADMIN CHECK
+# ==============================
+def is_admin():
+    async def predicate(interaction: discord.Interaction):
+        return interaction.user.guild_permissions.administrator
+
+    return app_commands.check(predicate)
 
 
 class Admin(commands.Cog):
@@ -10,177 +19,92 @@ class Admin(commands.Cog):
         self.bot = bot
 
     # ==============================
-    # ADMIN CHECK (POPRAWNY)
+    # ➕ DODAJ CRYPTO
     # ==============================
-    def is_admin():
-        async def predicate(interaction: discord.Interaction):
-            return interaction.user.guild_permissions.administrator
-
-        return app_commands.check(predicate)
-
-    # ==============================
-    # DODAJ PIENIĄDZE
-    # ==============================
-    @app_commands.command(
-        name="dodajpieniadze",
-        description="[ADMIN] Dodaj pieniądze użytkownikowi"
-    )
+    @app_commands.command(name="dodaj", description="[ADMIN] Dodaj 💎 Crypto")
     @is_admin()
-    async def dodaj_pieniadze(
-        self,
-        interaction: discord.Interaction,
-        uzytkownik: discord.Member,
-        kwota: int
-    ):
+    async def dodaj(self, interaction: discord.Interaction, user: discord.Member, kwota: int):
 
         if kwota <= 0:
-            return await interaction.response.send_message(
-                embed=utils.make_embed(
-                    "❌ Błąd",
-                    "Kwota musi być większa od 0.",
-                    utils.LOSE_COLOR,
-                ),
-                ephemeral=True,
-            )
+            return await interaction.response.send_message("❌ Kwota musi być > 0", ephemeral=True)
 
-        await db.update_balance(uzytkownik.id, kwota)
+        await db.update_crypto(user.id, kwota)
 
-        await db.log_transaction(
-            uzytkownik.id,
-            kwota,
-            "admin_add",
-            f"Admin {interaction.user.id}"
+        embed = discord.Embed(
+            title="✅ Dodano Crypto",
+            description=f"{user.mention} otrzymał **+{kwota} 💎**",
+            color=0x2ECC71
         )
 
-        await interaction.response.send_message(
-            embed=utils.make_embed(
-                "✅ Dodano Pieniądze",
-                f"{uzytkownik.mention} otrzymał {utils.format_currency(kwota)}.",
-                utils.WIN_COLOR,
-            )
-        )
+        await interaction.response.send_message(embed=embed)
 
     # ==============================
-    # USUŃ PIENIĄDZE
+    # ➖ USUŃ CRYPTO
     # ==============================
-    @app_commands.command(
-        name="usunpieniadze",
-        description="[ADMIN] Usuń pieniądze użytkownikowi"
-    )
+    @app_commands.command(name="usun", description="[ADMIN] Usuń 💎 Crypto")
     @is_admin()
-    async def usun_pieniadze(
-        self,
-        interaction: discord.Interaction,
-        uzytkownik: discord.Member,
-        kwota: int
-    ):
+    async def usun(self, interaction: discord.Interaction, user: discord.Member, kwota: int):
 
         if kwota <= 0:
-            return await interaction.response.send_message(
-                embed=utils.make_embed(
-                    "❌ Błąd",
-                    "Kwota musi być większa od 0.",
-                    utils.LOSE_COLOR,
-                ),
-                ephemeral=True,
-            )
+            return await interaction.response.send_message("❌ Kwota musi być > 0", ephemeral=True)
 
-        await db.update_balance(uzytkownik.id, -kwota)
+        await db.update_crypto(user.id, -kwota)
 
-        await db.log_transaction(
-            uzytkownik.id,
-            -kwota,
-            "admin_remove",
-            f"Admin {interaction.user.id}"
+        embed = discord.Embed(
+            title="❌ Usunięto Crypto",
+            description=f"{user.mention} stracił **-{kwota} 💎**",
+            color=0xE74C3C
         )
 
-        await interaction.response.send_message(
-            embed=utils.make_embed(
-                "✅ Usunięto Pieniądze",
-                f"Usunięto {utils.format_currency(kwota)} od {uzytkownik.mention}.",
-                utils.WIN_COLOR,
-            )
-        )
+        await interaction.response.send_message(embed=embed)
 
     # ==============================
-    # USTAW BALANS
+    # 💰 SET BALANCE
     # ==============================
-    @app_commands.command(
-        name="ustawpieniadze",
-        description="[ADMIN] Ustaw balans użytkownika"
-    )
+    @app_commands.command(name="set", description="[ADMIN] Ustaw Crypto")
     @is_admin()
-    async def ustaw_pieniadze(
-        self,
-        interaction: discord.Interaction,
-        uzytkownik: discord.Member,
-        kwota: int
-    ):
+    async def set(self, interaction: discord.Interaction, user: discord.Member, kwota: int):
 
         if kwota < 0:
-            return await interaction.response.send_message(
-                embed=utils.make_embed(
-                    "❌ Błąd",
-                    "Balans nie może być ujemny.",
-                    utils.LOSE_COLOR,
-                ),
-                ephemeral=True,
-            )
+            return await interaction.response.send_message("❌ Nie może być < 0", ephemeral=True)
 
-        await db.set_balance(uzytkownik.id, kwota)
+        data = await db.get_profile(user.id)
+        current = data["crypto"]
 
-        await interaction.response.send_message(
-            embed=utils.make_embed(
-                "✅ Ustawiono Balans",
-                f"{uzytkownik.mention} ma teraz {utils.format_currency(kwota)}.",
-                utils.WIN_COLOR,
-            )
+        diff = kwota - current
+        await db.update_crypto(user.id, diff)
+
+        embed = discord.Embed(
+            title="⚙️ Ustawiono balans",
+            description=f"{user.mention} ma teraz **{kwota} 💎**",
+            color=0xF1C40F
         )
 
+        await interaction.response.send_message(embed=embed)
+
     # ==============================
-    # RESET USERA
+    # 🧨 RESET USERA
     # ==============================
-    @app_commands.command(
-        name="resetuser",
-        description="[ADMIN] Reset konta użytkownika"
-    )
+    @app_commands.command(name="reset", description="[ADMIN] Reset konta")
     @is_admin()
-    async def reset_user(
-        self,
-        interaction: discord.Interaction,
-        uzytkownik: discord.Member
-    ):
+    async def reset(self, interaction: discord.Interaction, user: discord.Member):
 
-        await db.set_balance(uzytkownik.id, 0)
-        await db.set_bank(uzytkownik.id, 0)
+        data = await db.get_profile(user.id)
 
-        await interaction.response.send_message(
-            embed=utils.make_embed(
-                "✅ Reset",
-                f"Konto {uzytkownik.mention} zostało zresetowane.",
-                utils.WIN_COLOR,
-            )
+        await db.update_crypto(user.id, -data["crypto"])
+        await db.update_pln(user.id, -data["pln"])
+
+        embed = discord.Embed(
+            title="🧨 Reset konta",
+            description=f"{user.mention} został zresetowany",
+            color=0x95A5A6
         )
 
-    # ==============================
-    # ERROR HANDLER
-    # ==============================
-    @dodaj_pieniadze.error
-    @usun_pieniadze.error
-    @ustaw_pieniadze.error
-    @reset_user.error
-    async def admin_error(self, interaction: discord.Interaction, error):
-
-        if isinstance(error, app_commands.CheckFailure):
-            await interaction.response.send_message(
-                embed=utils.make_embed(
-                    "❌ Brak uprawnień",
-                    "Musisz być administratorem.",
-                    utils.LOSE_COLOR,
-                ),
-                ephemeral=True,
-            )
+        await interaction.response.send_message(embed=embed)
 
 
+# ==============================
+# SETUP (RAILWAY FIX)
+# ==============================
 async def setup(bot: commands.Bot):
     await bot.add_cog(Admin(bot))
