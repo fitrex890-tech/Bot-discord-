@@ -48,10 +48,20 @@ class Games(commands.Cog):
         )
 
     # =========================
-    # 🎰 SPIN (FIXED 100%)
+    # 🎰 SPIN (KOŁO FORTUNY - FIX)
     # =========================
     @app_commands.command(name="spin", description="🎰 Koło fortuny")
-    async def spin(self, interaction: discord.Interaction, bet: int):
+    @app_commands.choices(level=[
+        app_commands.Choice(name="Low 🟢", value="low"),
+        app_commands.Choice(name="Medium 🟡", value="medium"),
+        app_commands.Choice(name="Hard 🔥", value="hard"),
+    ])
+    async def spin(
+        self,
+        interaction: discord.Interaction,
+        bet: int,
+        level: app_commands.Choice[str]
+    ):
 
         if bet <= 0:
             return await interaction.response.send_message("❌ Zła kwota")
@@ -62,40 +72,71 @@ class Games(commands.Cog):
 
         await db.update_crypto(interaction.user.id, -bet)
 
-        embed = discord.Embed(title="🎰 Kręcę kołem...")
-        embed.set_image(url="https://media.giphy.com/media/3o7aD2saalBwwftBIY/giphy.gif")
+        embed = discord.Embed(
+            title="🎰 Koło fortuny się kręci...",
+            description=f"Poziom: **{level.name}**\nStawka: **{bet} 💎**"
+        )
+        embed.set_image(url="https://media.tenor.com/your_spin.gif")
 
         await interaction.response.send_message(embed=embed)
         msg = await interaction.original_response()
 
         await asyncio.sleep(3)
 
-        wheel = [
-            ("🟢", 0.5),
-            ("🟢", 1),
-            ("🟡", 1.5),
-            ("🔵", 3),
-            ("🟣", 6),
-            ("💀", 0),
-        ]
+        # =========================
+        # LEVEL SYSTEM
+        # =========================
+        if level.value == "low":
+            options = [
+                ("🟢", 1, "https://media.tenor.com/green.gif"),
+                ("🟡", 1.5, "https://media.tenor.com/yellow.gif"),
+                ("⚪", 0, "https://media.tenor.com/fail.gif"),
+            ]
+            weights = [50, 35, 15]
 
-        weights = [30, 25, 20, 15, 7, 3]
+        elif level.value == "medium":
+            options = [
+                ("🟢", 1.2, "https://media.tenor.com/green.gif"),
+                ("🔵", 2.5, "https://media.tenor.com/blue.gif"),
+                ("⚪", 0, "https://media.tenor.com/fail.gif"),
+            ]
+            weights = [40, 40, 20]
 
-        color, mult = random.choices(wheel, weights=weights)[0]
+        else:  # hard
+            options = [
+                ("🔵", 3, "https://media.tenor.com/blue.gif"),
+                ("🟣", 6, "https://media.tenor.com/purple.gif"),
+                ("⚪", 0, "https://media.tenor.com/fail.gif"),
+            ]
+            weights = [45, 30, 25]
 
-        if color == "💀":
+        color, mult, gif = random.choices(options, weights=weights)[0]
+
+        # =========================
+        # LOSE
+        # =========================
+        if color == "⚪":
             await msg.edit(
-                content=f"💀 PRZEGRANA!\n❌ -{bet} 💎",
-                embed=None
+                embed=discord.Embed(
+                    title="💀 PRZEGRANA",
+                    description=f"-{bet} 💎",
+                    color=0xFFFFFF
+                ).set_image(url=gif)
             )
             return
 
+        # =========================
+        # WIN
+        # =========================
         win = int(bet * mult)
         await db.update_crypto(interaction.user.id, win)
 
         await msg.edit(
-            content=f"{color} WYGRANA!\n💰 +{win} 💎\n📊 STAWKA: {bet}",
-            embed=None
+            embed=discord.Embed(
+                title=f"{color} WYGRANA!",
+                description=f"+{win} 💎\nMnożnik: x{mult}",
+                color=0x00FF00
+            ).set_image(url=gif)
         )
 
     # =========================
@@ -186,7 +227,7 @@ class Games(commands.Cog):
 
 
 # =========================
-# RAILWAY SETUP
+# SETUP (RAILWAY FIX)
 # =========================
 async def setup(bot):
     await bot.add_cog(Games(bot))
