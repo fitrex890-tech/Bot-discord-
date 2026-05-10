@@ -27,7 +27,10 @@ COGS = [
     "cogs.games",
     "cogs.admin",
     "cogs.shop",
+    "cogs.ranks",
+    "cogs.giveaway",
 ]
+
 
 
 @bot.event
