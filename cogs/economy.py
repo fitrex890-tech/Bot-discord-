@@ -1,3 +1,6 @@
+from discord import app_commands
+import discord
+
 @app_commands.command(name="przelej", description="💸 Przelej pieniądze graczowi")
 @app_commands.choices(currency=[
     app_commands.Choice(name="Crypto 💎", value="crypto"),
@@ -12,19 +15,25 @@ async def transfer(
 ):
 
     # =========================
-    # ❌ SELF TRANSFER BLOCK
+    # SELF TRANSFER BLOCK
     # =========================
     if user.id == interaction.user.id:
-        return await interaction.response.send_message("❌ Nie możesz przelać sobie")
+        return await interaction.response.send_message(
+            "❌ Nie możesz przelać sobie",
+            ephemeral=True
+        )
 
     # =========================
-    # ❌ INVALID AMOUNT
+    # AMOUNT CHECK
     # =========================
     if amount <= 0:
-        return await interaction.response.send_message("❌ Zła kwota")
+        return await interaction.response.send_message(
+            "❌ Zła kwota",
+            ephemeral=True
+        )
 
     # =========================
-    # 📊 GET WALLET
+    # GET WALLET
     # =========================
     data = await db.get_profile(interaction.user.id)
 
@@ -32,16 +41,22 @@ async def transfer(
     pln = data["pln"]
 
     # =========================
-    # 🔒 BALANCE CHECK
+    # BALANCE CHECK
     # =========================
     if currency.value == "crypto" and crypto < amount:
-        return await interaction.response.send_message("❌ Za mało 💎")
+        return await interaction.response.send_message(
+            "❌ Za mało 💎",
+            ephemeral=True
+        )
 
     if currency.value == "pln" and pln < amount:
-        return await interaction.response.send_message("❌ Za mało zł")
+        return await interaction.response.send_message(
+            "❌ Za mało zł",
+            ephemeral=True
+        )
 
     # =========================
-    # 💸 TRANSFER EXECUTION
+    # TRANSFER
     # =========================
     if currency.value == "crypto":
         await db.update_crypto(interaction.user.id, -amount)
@@ -52,7 +67,7 @@ async def transfer(
         await db.update_pln(user.id, amount)
 
     # =========================
-    # 📢 RESPONSE
+    # RESPONSE
     # =========================
     await interaction.response.send_message(
         f"💸 Przelano **{amount} {currency.name}** do {user.mention}"
