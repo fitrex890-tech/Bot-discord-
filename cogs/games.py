@@ -44,11 +44,11 @@ class Games(commands.Cog):
         await db.update_crypto(interaction.user.id, reward)
 
         await interaction.response.send_message(
-            f"🎁 Daily!\n💰 +{reward} 💎"
+            f"🎁 Daily odebrane!\n💰 +{reward} 💎"
         )
 
     # =========================
-    # 🎰 SPIN (FIXED + GIF)
+    # 🎰 SPIN (FIXED 100%)
     # =========================
     @app_commands.command(name="spin", description="🎰 Koło fortuny")
     async def spin(self, interaction: discord.Interaction, bet: int):
@@ -84,13 +84,19 @@ class Games(commands.Cog):
         color, mult = random.choices(wheel, weights=weights)[0]
 
         if color == "💀":
-            await msg.edit(content=f"💀 PRZEGRANA -{bet} 💎")
+            await msg.edit(
+                content=f"💀 PRZEGRANA!\n❌ -{bet} 💎",
+                embed=None
+            )
             return
 
         win = int(bet * mult)
         await db.update_crypto(interaction.user.id, win)
 
-        await msg.edit(content=f"{color} WYGRANA +{win} 💎")
+        await msg.edit(
+            content=f"{color} WYGRANA!\n💰 +{win} 💎\n📊 STAWKA: {bet}",
+            embed=None
+        )
 
     # =========================
     # 🃏 BLACKJACK
@@ -180,7 +186,7 @@ class Games(commands.Cog):
 
 
 # =========================
-# RAILWAY FIX
+# RAILWAY SETUP
 # =========================
 async def setup(bot):
     await bot.add_cog(Games(bot))
