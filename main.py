@@ -29,6 +29,7 @@ COGS = [
     "cogs.shop",
     "cogs.ranks",
     "cogs.giveaway",
+    "cogs.botinfo",
 ]
 
 
