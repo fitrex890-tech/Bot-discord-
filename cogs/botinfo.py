@@ -11,7 +11,6 @@ class BotInfo(commands.Cog):
         self.start_time = datetime.utcnow()
 
     def get_uptime(self) -> str:
-        """Oblicza uptime bota"""
         delta = datetime.utcnow() - self.start_time
         hours, remainder = divmod(int(delta.total_seconds()), 3600)
         minutes, seconds = divmod(remainder, 60)
@@ -22,13 +21,7 @@ class BotInfo(commands.Cog):
         elif hours > 0:
             return f"{hours}h {minutes}m {seconds}s"
         else:
-            return f"{minutes}m {seconds}s"
-
-    @app_commands.command(name="botinfo", description="Informacje o bocie")
-    async def botinfo(self, interaction: discord.Interaction):
-        """Wyświetla informacje o bocie"""
-        
-        total_commands = len(self.bot.tree._get_all_commands())
+            return f"{minutes}m {seconds}saction        total_commands = len(self.bot.tree._get_all_commands())
         guild_count = len(self.bot.guilds)
         total_users = sum(guild.member_count for guild in self.bot.guilds)
         
@@ -48,3 +41,41 @@ class BotInfo(commands.Cog):
             name="🏢 Serwer",
             value="**Zjednoczeni Ideą**",
             inline=True,
+        )
+        
+        embed.add_field(
+            name="⏱️ Uptime",
+            value=f"**{self.get_uptime()}**",
+            inline=True,
+        )
+        
+        embed.add_field(
+           👥 Użytkownicy: **{total_users:,}**\n"
+                f"⚙️ Komendy: **{total_commands}**"
+            ),
+            inline=False,
+        )
+        
+        embed.add_field(
+            name="🎮 Funkcje",
+            value=(
+                "💰 System ekonomii\n"
+                "🎰 Mini⚡ Komendy administracyjne"
+            ),
+            inline=False,
+        )
+        
+        embed.add_field(
+            name="💻 Technologia",
+            value="**discord.py** • **SQLite** • **Python 3.10+**",
+            inline=False,
+        )
+        
+        embed.set_thumbnail(url=self.bot.user.display_avatar.url)
+        embed.set_footer(text="Crypto Casino Bot | /botinfo")
+        
+        await interaction.response.send_message(embed=embed)
+
+
+async def setup(bot: commands.Bot):
+    await bot.add_cog(BotInfo(bot))
