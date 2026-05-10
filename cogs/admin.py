@@ -10,13 +10,13 @@ class Admin(commands.Cog):
         self.bot = bot
 
     # ==============================
-    # CHECK ADMIN (PEWNY SYSTEM)
+    # ADMIN CHECK (POPRAWNY)
     # ==============================
-    async def admin_check(self, interaction: discord.Interaction):
-        return interaction.user.guild_permissions.administrator
-
     def is_admin():
-        return app_commands.check(lambda i: i.user.guild_permissions.administrator)
+        async def predicate(interaction: discord.Interaction):
+            return interaction.user.guild_permissions.administrator
+
+        return app_commands.check(predicate)
 
     # ==============================
     # DODAJ PIENIĄDZE
@@ -68,7 +68,12 @@ class Admin(commands.Cog):
         description="[ADMIN] Usuń pieniądze użytkownikowi"
     )
     @is_admin()
-    async def usun_pieniadze(self, interaction, uzytkownik: discord.Member, kwota: int):
+    async def usun_pieniadze(
+        self,
+        interaction: discord.Interaction,
+        uzytkownik: discord.Member,
+        kwota: int
+    ):
 
         if kwota <= 0:
             return await interaction.response.send_message(
@@ -105,7 +110,12 @@ class Admin(commands.Cog):
         description="[ADMIN] Ustaw balans użytkownika"
     )
     @is_admin()
-    async def ustaw_pieniadze(self, interaction, uzytkownik: discord.Member, kwota: int):
+    async def ustaw_pieniadze(
+        self,
+        interaction: discord.Interaction,
+        uzytkownik: discord.Member,
+        kwota: int
+    ):
 
         if kwota < 0:
             return await interaction.response.send_message(
@@ -128,14 +138,18 @@ class Admin(commands.Cog):
         )
 
     # ==============================
-    # RESET
+    # RESET USERA
     # ==============================
     @app_commands.command(
         name="resetuser",
-        description="[ADMIN] Reset konta"
+        description="[ADMIN] Reset konta użytkownika"
     )
     @is_admin()
-    async def reset_user(self, interaction, uzytkownik: discord.Member):
+    async def reset_user(
+        self,
+        interaction: discord.Interaction,
+        uzytkownik: discord.Member
+    ):
 
         await db.set_balance(uzytkownik.id, 0)
         await db.set_bank(uzytkownik.id, 0)
@@ -143,57 +157,10 @@ class Admin(commands.Cog):
         await interaction.response.send_message(
             embed=utils.make_embed(
                 "✅ Reset",
-                f"Konto {uzytkownik.mention} zresetowane.",
+                f"Konto {uzytkownik.mention} zostało zresetowane.",
                 utils.WIN_COLOR,
             )
         )
-
-    # ==============================
-    # BOT INFO
-    # ==============================
-    @app_commands.command(
-        name="botinfo",
-        description="Informacje o bocie"
-    )
-    async def bot_info(self, interaction: discord.Interaction):
-
-        embed = utils.make_embed(
-            title="🤖 Crypto Casino Bot",
-            description="Ekonomia + Casino + Admin system",
-            color=utils.JACKPOT_COLOR,
-        )
-
-        embed.add_field(
-            name="💰 Ekonomia",
-            value="/balans • /daily • /pracuj • /przelej",
-            inline=False,
-        )
-
-        embed.add_field(
-            name="🎰 Gry",
-            value="/spin • /blackjack • /slots • /roulette",
-            inline=False,
-        )
-
-        embed.add_field(
-            name="🛡️ Admin",
-            value="/dodajpieniadze • /usunpieniadze • /ustawpieniadze • /resetuser",
-            inline=False,
-        )
-
-        embed.add_field(
-            name="📊 Info",
-            value=(
-                f"Serwery: {len(self.bot.guilds)}\n"
-                f"Użytkownicy: {sum(g.member_count or 0 for g in self.bot.guilds):,}\n"
-                f"Komendy: {len(list(self.bot.tree.walk_commands()))}"
-            ),
-            inline=False,
-        )
-
-        embed.set_thumbnail(url=self.bot.user.display_avatar.url)
-
-        await interaction.response.send_message(embed=embed)
 
     # ==============================
     # ERROR HANDLER
@@ -207,7 +174,7 @@ class Admin(commands.Cog):
         if isinstance(error, app_commands.CheckFailure):
             await interaction.response.send_message(
                 embed=utils.make_embed(
-                    "❌ Brak Uprawnień",
+                    "❌ Brak uprawnień",
                     "Musisz być administratorem.",
                     utils.LOSE_COLOR,
                 ),
