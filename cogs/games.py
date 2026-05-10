@@ -11,17 +11,17 @@ class Games(commands.Cog):
         self.bot = bot
 
     # =========================
-    # 💼 WORK (ZARABIANIE)
+    # 💼 WORK
     # =========================
-    @app_commands.command(name="pracuj", description="💼 Idź do pracy i zarób")
+    @app_commands.command(name="pracuj", description="💼 Idź do pracy")
     async def work(self, interaction: discord.Interaction):
 
         jobs = [
             "📦 Rozwoziłeś paczki",
-            "🍔 Pracowałeś w fast foodzie",
-            "🧑‍💻 Programowałeś systemy",
-            "🚗 Jeździłeś Uberem",
-            "🧹 Sprzątałeś biuro"
+            "🍔 Fast food worker",
+            "🧑‍💻 Programista",
+            "🚗 Uber driver",
+            "🧹 Sprzątanie biura"
         ]
 
         job = random.choice(jobs)
@@ -30,15 +30,13 @@ class Games(commands.Cog):
         await db.update_crypto(interaction.user.id, earn)
 
         await interaction.response.send_message(
-            f"💼 **Praca wykonana!**\n"
-            f"{job}\n\n"
-            f"💰 Zarobek: **+{earn} 💎 Crypto**"
+            f"💼 {job}\n💰 +{earn} 💎"
         )
 
     # =========================
     # 🎁 DAILY
     # =========================
-    @app_commands.command(name="daily", description="🎁 codzienna nagroda")
+    @app_commands.command(name="daily", description="🎁 nagroda dzienna")
     async def daily(self, interaction: discord.Interaction):
 
         reward = random.randint(50, 200)
@@ -46,12 +44,11 @@ class Games(commands.Cog):
         await db.update_crypto(interaction.user.id, reward)
 
         await interaction.response.send_message(
-            f"🎁 **Daily odebrane!**\n"
-            f"💰 +{reward} 💎 Crypto"
+            f"🎁 Daily!\n💰 +{reward} 💎"
         )
 
     # =========================
-    # 🎰 SPIN (GIF + KOŁO)
+    # 🎰 SPIN (FIXED)
     # =========================
     @app_commands.command(name="spin", description="🎰 Koło fortuny")
     async def spin(self, interaction: discord.Interaction, bet: int):
@@ -68,7 +65,9 @@ class Games(commands.Cog):
         embed = discord.Embed(title="🎰 Kręcę kołem...")
         embed.set_image(url="https://media.giphy.com/media/3o7aD2saalBwwftBIY/giphy.gif")
 
-        msg = await interaction.response.send_message(embed=embed)
+        await interaction.response.send_message(embed=embed)
+        msg = await interaction.original_response()
+
         await asyncio.sleep(3)
 
         wheel = [
@@ -85,61 +84,20 @@ class Games(commands.Cog):
         color, mult = random.choices(wheel, weights=weights)[0]
 
         if color == "💀":
-            await msg.edit_original_response(
-                content=f"💀 KOŁO: pech!\n❌ Strata: -{bet} 💎",
-                embed=None
-            )
+            await msg.edit(content=f"💀 PRZEGRANA -{bet} 💎")
             return
 
         win = int(bet * mult)
         await db.update_crypto(interaction.user.id, win)
 
-        await msg.edit_original_response(
-            content=(
-                f"{color} KOŁO: wynik!\n"
-                f"💰 Wygrana: +{win} 💎\n"
-                f"📊 Stawka: {bet}"
-            ),
-            embed=None
+        await msg.edit(
+            content=f"{color} WYGRANA!\n💰 +{win} 💎"
         )
 
     # =========================
     # 🃏 BLACKJACK
     # =========================
-    @app_commands.command(name="blackjack", description="🃏 Blackjack")
+    @app_commands.command(name="blackjack", description="🃏 blackjack")
     async def blackjack(self, interaction: discord.Interaction, bet: int):
 
-        if bet <= 0:
-            return await interaction.response.send_message("❌ Zła kwota")
-
-        data = await db.get_profile(interaction.user.id)
-        if data["crypto"] < bet:
-            return await interaction.response.send_message("❌ Za mało 💎")
-
-        await db.update_crypto(interaction.user.id, -bet)
-
-        player = random.randint(14, 23)
-        dealer = random.randint(16, 24)
-
-        if player > 21:
-            player = 21
-        if dealer > 21:
-            dealer = 21
-
-        if player > dealer:
-            reward = bet * 2
-            await db.update_crypto(interaction.user.id, reward)
-
-            result = f"🎉 WYGRANA!\n💰 +{reward} 💎\n📊 Lepsza ręka"
-        elif player == dealer:
-            await db.update_crypto(interaction.user.id, bet)
-            result = "🤝 REMIS – zwrot betu"
-        else:
-            result = f"💀 PRZEGRANA -{bet} 💎\nDealer wygrał"
-
-        await interaction.response.send_message(
-            f"🃏 TY: {player} | DEALER: {dealer}\n\n{result}"
-        )
-
-    # =========================
-    # 💣
+        if bet <=
