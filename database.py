@@ -9,6 +9,7 @@ DB_PATH = os.getenv("DB_PATH", "economy.db")
 # =========================
 async def init_db():
     async with aiosqlite.connect(DB_PATH) as db:
+
         await db.execute("""
         CREATE TABLE IF NOT EXISTS users (
             user_id INTEGER PRIMARY KEY,
@@ -75,100 +76,23 @@ async def get_profile(user_id: int):
                     "pln": 0,
                     "bank_crypto": 0,
                     "bank_pln": 0,
-                    "wins": 0
+                    "wins": 0,
+                    "last_daily": None,
+                    "last_work": None
                 }
 
             return dict(row)
 
 
 # =========================
-# UPDATE CRYPTO
+# CRYPTO
 # =========================
 async def update_crypto(user_id: int, amount: int):
     async with aiosqlite.connect(DB_PATH) as db:
         await ensure_user(db, user_id)
 
         await db.execute("""
-        UPDATE users 
-        SET crypto = crypto + ? 
+        UPDATE users
+        SET crypto = crypto + ?
         WHERE user_id = ?
-        """, (amount, user_id))
-
-        await db.commit()
-
-
-# =========================
-# UPDATE PLN
-# =========================
-async def update_pln(user_id: int, amount: int):
-    async with aiosqlite.connect(DB_PATH) as db:
-        await ensure_user(db, user_id)
-
-        await db.execute("""
-        UPDATE users 
-        SET pln = pln + ? 
-        WHERE user_id = ?
-        """, (amount, user_id))
-
-        await db.commit()
-
-
-# =========================
-# BANK CRYPTO
-# =========================
-async def update_bank_crypto(user_id: int, amount: int):
-    async with aiosqlite.connect(DB_PATH) as db:
-        await ensure_user(db, user_id)
-
-        await db.execute("""
-        UPDATE users 
-        SET bank_crypto = bank_crypto + ? 
-        WHERE user_id = ?
-        """, (amount, user_id))
-
-        await db.commit()
-
-
-# =========================
-# BANK PLN
-# =========================
-async def update_bank_pln(user_id: int, amount: int):
-    async with aiosqlite.connect(DB_PATH) as db:
-        await ensure_user(db, user_id)
-
-        await db.execute("""
-        UPDATE users 
-        SET bank_pln = bank_pln + ? 
-        WHERE user_id = ?
-        """, (amount, user_id))
-
-        await db.commit()
-
-
-# =========================
-# WINS
-# =========================
-async def add_win(user_id: int):
-    async with aiosqlite.connect(DB_PATH) as db:
-        await ensure_user(db, user_id)
-
-        await db.execute("""
-        UPDATE users 
-        SET wins = wins + 1 
-        WHERE user_id = ?
-        """, (user_id,))
-
-        await db.commit()
-
-
-# =========================
-# TRANSACTIONS (FIXED ❌ BUG HERE WAS YOUR CRASH)
-# =========================
-async def log_transaction(user_id: int, amount: int, type_: str):
-    async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute("""
-        INSERT INTO transactions (user_id, amount, type)
-        VALUES (?, ?, ?)
-        """, (user_id, amount, type_))
-
-        await db.commit()
+        """, (amount,
